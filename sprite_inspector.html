@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" >
+<title>Sprite Inspector</title>
+<style>
+#img {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    z-index: 1;
+}
+
+#frames {
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+
+.frame, #ruler_x, #ruler_y, #origin {
+    z-index: 2;
+    display: block;
+    position: absolute;
+    border: 5px solid rgba(0, 153, 153, 0.3);
+    background-color: transparent;
+    margin: 0;
+    padding: 0;
+    color: #0FF;
+    font-size: 30px;
+    font-weight: bold;
+    font-family: 'Trebuchet MS';
+    text-align: center;
+    text-shadow: 1px 1px 2px #000;
+}
+
+.active {
+    border-color: lime;
+    color: lime;
+}
+
+#ruler_x, #ruler_y {
+    border: 1px dashed red;
+}
+
+#ruler_y {
+    border-left: none;
+    border-right: none;
+}
+
+#ruler_x {
+    border-top: none;
+    border-bottom: none;
+}
+
+#origin {
+    width: 0px;
+    height: 0px;
+    border-color: red;
+    border-radius: 3px;
+    border-width: 3px;
+}
+</style>
+</head>
+<body>
+<input type="file" onchange="onSetImage(this.files[0]);"/>
+<input type="file" onchange="importData(this.files[0]);"/>
+
+<div id="controls">
+    Origin X : <input type="number" id="txt_rx" onchange="updateOrigin();"/>&nbsp;&nbsp;&nbsp;&nbsp;
+    Origin Y : <input type="number" id="txt_ry" onchange="updateOrigin();"/>
+    <br/>
+    X : <input type="number" id="txt_x" onchange="updateFrame();" tabindex="1"/>&nbsp;&nbsp;&nbsp;&nbsp;
+    Y : <input type="number" id="txt_y" onchange="updateFrame();"/>
+    <br/>
+    Width : <input type="number" id="txt_w" onchange="updateFrame();" tabindex="2"/>&nbsp;&nbsp;&nbsp;&nbsp;
+    Height : <input type="number" id="txt_h" onchange="updateFrame();"/>
+    <br/>
+    <button type="button" onclick="prev();">Prev</button>
+    <button type="button" onclick="next();" tabindex="3">Next</button>
+    Frame : <input type="number" id="txt_frame" onchange="selectFrame(parseInt(this.value));"/>
+    <br/>
+    <button type="button" onclick="exportData();">Export</button>
+</div>
+
+<div style="position: relative;">
+    <img id="img"/>
+    <ul id="frames"></ul>
+    <div id="ruler_x"></div>
+    <div id="ruler_y"></div>
+    <div id="origin"></div>
+</div>
+
+<script src="JS/DOM.js"></script>
+<script src="JS/BasePreload.class.js"></script>
+<script>
+var borderWidth = 5,
+    originBorderWidth = 3,
+    currentFrame = -1, 
+    maxFrame = 0,
+    frames = [],
+    txt_x = MyDOM.get('txt_x'),
+    txt_y = MyDOM.get('txt_y'),
+    txt_w = MyDOM.get('txt_w'),
+    txt_h = MyDOM.get('txt_h'),
+    txt_rx = MyDOM.get('txt_rx'),
+    txt_ry = MyDOM.get('txt_ry'),
+    txt_frame = MyDOM.get('txt_frame'),
+    imageWidth = 0, 
+    imageHeight = 0,
+    frameRoot = MyDOM.get('frames'),
+    rulerX = MyDOM.get('ruler_x'),
+    rulerY = MyDOM.get('ruler_y'),
+    origin = MyDOM.get('origin')
+;
+
+function selectFrame (fi) {
+    // Do we have any frame yet?
+    if (maxFrame > 0) {
+        frameRoot.children[currentFrame].className = 'frame';
+    } else {
+        return;
+    }
+    
+    // Is this frame index valid?
+    if (fi < 0 || fi >= maxFrame) {
+        return;
+    }
+    
+    currentFrame = fi;
+    f = frames[fi];
+    
+    // Update UI
+    passDataToControls(f);
+    updateFrame(f);
+    
+    // Highlight new frame
+    frameRoot.children[currentFrame].className = 'frame active';
+    
+    // Focus on X
+    txt_x.focus();
+    
+    txt_frame.value = fi;
+}
+
+function prev () {
+    if (currentFrame > 0) {
+        selectFrame(currentFrame - 1);
+    }
+}
+
+function next () {
+    if (maxFrame > 0) {
+        frameRoot.children[currentFrame].className = 'frame';
+    }
+    
+    var f = frames[currentFrame] || {x : -64, y : 0, w : 64, h : 64};
+    ++currentFrame;
+    if (currentFrame >= maxFrame) {
+        var x = 0,
+            y = f.y,
+            w = f.w,
+            h = f.h;
+        
+        if (f.x + f.w <= imageWidth) {
+            x = f.x + f.w;
+        } else {
+            x = 0; // next row
+            y += f.h;
+        }
+        
+        frames.push({
+            x : x,
+            y : y,
+            w : w,
+            h : h,
+            i : 0,
+            rx : 0,
+            ry : h
+        });
+        
+        maxFrame = frames.length;
+        
+        var frameNode = MyDOM.create('li', ['class', 'frame active'], currentFrame);
+        frameRoot.appendChild(frameNode);
+    }
+    
+    selectFrame(currentFrame);
+}
+
+function passDataToControls (f) {
+    txt_x.value = f.x;
+    txt_y.value = f.y;
+    txt_w.value = f.w;
+    txt_h.value = f.h;
+    txt_rx.value = f.rx;
+    txt_ry.value = f.ry;
+}
+
+function updateFrame (f) {
+    var fui = frameRoot.children[currentFrame];
+    
+    if (!f) {
+        f = frames[currentFrame];
+    }
+    
+    f.x = parseInt(txt_x.value);
+    f.y = parseInt(txt_y.value);
+    f.w = parseInt(txt_w.value);
+    f.h = parseInt(txt_h.value);
+    
+    fui.style.cssText = 'left: ' + (f.x - borderWidth) + 'px; top: ' + (f.y - borderWidth) + 'px; width: ' + f.w + 'px; height: ' + f.h + 'px;';
+    rulerX.style.cssText = 'left: ' + (f.x - 1) + 'px; top: -1px; width: ' + f.w + 'px; height: ' + imageHeight + 'px;';
+    rulerY.style.cssText = 'left: -1px; top: ' + (f.y - 1) + 'px; width: ' + imageWidth + 'px; height: ' + f.h + 'px;';
+    
+    updateOrigin(f);
+}
+
+function updateOrigin (f) {
+    if (!f) {
+        f = frames[currentFrame];
+    }
+    
+    f.rx = parseInt(txt_rx.value);
+    f.ry = parseInt(txt_ry.value);
+
+    origin.style.cssText = 'left: ' + (f.x + f.rx - originBorderWidth) + 'px; top: ' + (f.y + f.ry - originBorderWidth) + 'px;';
+}
+
+function init () {
+    var img = MyDOM.get('img');
+    imageWidth = img.clientWidth;
+    imageHeight = img.clientHeight;
+    next();
+}
+
+function onSetImage (imgFile) {
+    var img = MyDOM.get('img');
+    img.onload = init;
+    MyDOM.displayImageFile(img, imgFile);
+}
+
+function importData (spriteDataFile) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+        var importedFrames = JSON.parse(e.target.result),
+            n = importedFrames.length,
+            i, 
+            frameNodes = '';
+        
+        if (n == 0) {
+            return;
+        }
+        
+        frames = [];
+        for (i = 0 ; i < n ; ++i) {
+            var f = importedFrames[i];
+            frames[i] = {
+                x : f[0],
+                y : f[1],
+                w : f[2],
+                h : f[3],
+                rx : f[4],
+                ry : f[5]
+            };
+            f = frames[i];
+            frameNodes += '<li class="frame" style="left: ' + (f.x - borderWidth) + 'px; top: ' + (f.y - borderWidth) + 'px; width: ' + f.w + 'px; height: ' + f.h + 'px;">' + i + '</li>';
+        }
+        frameRoot.innerHTML = frameNodes;
+        
+        maxFrame = frames.length;
+        selectFrame(maxFrame - 1);
+    };
+    reader.readAsText(spriteDataFile);
+}
+
+function exportData () {
+    var exportedFrames = [];
+    for (var i = 0 ; i < frames.length ; ++i) {
+        var f = frames[i];
+        exportedFrames.push([f.x, f.y, f.w, f.h, f.rx, f.ry]);
+    }
+    console.log(JSON.stringify(exportedFrames));
+    alert('check console');
+}
+</script>
+</body>
+</html>

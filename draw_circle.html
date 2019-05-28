@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" >
+<title>Draw Circle</title>
+</head>
+<body>
+
+<canvas id="myCanvas" width="500" height="300" style="box-shadow: 0 0 5px #666;">
+    Your browser doesn't support HTML5
+</canvas>
+
+<script src="JS/easeljs.js"></script>
+<script>
+var stage, circle;
+
+function init () {
+    // Create a stage
+    stage = new createjs.Stage('myCanvas');
+    
+    // Create a circle
+    circle = new createjs.Shape();
+    
+    // Add circle to stage
+    stage.addChild(circle);
+
+    drawCircle(50, 100, 100, 'green');
+}
+
+function drawCircle (radius, centerX, centerY, color) {
+    // Draw circle
+    circle.graphics.beginFill(color);
+    circle.graphics.drawCircle(0, 0, radius); // 0, 0 is offset from center
+    circle.setTransform(centerX, centerY);
+    
+    // Render
+    stage.update();
+}
+
+document.body.onload = init;
+</script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" >
+<title>State Machine GUI</title>
+<style>
+ul {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+}
+
+li {
+    margin: 0px;
+    padding: 3px 10px;
+}
+
+li:hover {
+    background-color: #B5E9FF;
+}
+
+.StartState, .EndState {
+    width: 100px;
+}
+
+.Conditions, .Actions {
+    width: 200px;
+}
+</style>
+</head>
+<body>
+
+<input type="file" onchange="importData(this.files[0]);"/>
+
+<h1>States</h1>
+<ul id="states"></ul>
+<button type="button" onclick="addState();">Add state</button>
+
+<p/>
+
+<h1>Transitions</h1>
+<ul id="transitions"></ul>
+<button type="button" onclick="addTransition();">Add transition</button>
+<button type="button" onclick="parse();">Parse</button>
+
+<script src="JS/DOM.js"></script>
+<script src="JS/StateMachine.class.js"></script>
+<script>
+var transitions = MyDOM.get('transitions');
+var states      = MyDOM.get('states');
+var sm = new StateMachine.Machine();
+var stateHtml = '<span>Name: </span><input type="text" placeholder="State name"/><span>Animation: </span><input type="text" placeholder="State animation"/>';
+var transitionHtml = '<span>From </span><input type="text" class="StartState" placeholder="Starting state"/><span> to </span><input type="text" class="EndState" placeholder="Ending state"/><span>. Conditions: </span><input type="text" class="Conditions" placeholder="Conditions separated by \',\', prepend custom by $)"/><span>. Actions: </span><input type="text" class="Actions" placeholder="Actions separated by \',\', prepend custom by $)"/><button type="button" onclick="moveUp(this);">^</button><button type="button" onclick="removeTransition(this);">X</button>';
+
+function addState () {
+    var li = MyDOM.create('li', [], stateHtml);
+    states.appendChild(li);
+    li.children[1].focus();
+}
+
+function addTransition () {
+    var li = MyDOM.create('li', [], transitionHtml);
+    transitions.appendChild(li);
+    li.children[1].focus();
+}
+
+function moveUp (btn) {
+    var li = btn.parentNode;
+    if (li.previousElementSibling) { // can move up
+        li.parentNode.insertBefore(li, li.previousElementSibling);
+    }
+}
+
+function removeTransition (btn) {
+    if (!confirm('Do you want to remove this transition?')) {
+        return;
+    }
+    var li = btn.parentNode;
+    li.parentNode.removeChild(li);
+}
+
+function parse () {
+    sm.clear();
+    StateMachine.reset();
+    _findStates();
+    _findTransitions();
+    
+    alert('Please check console');
+    console.log(sm.explain());
+    console.log(sm.toString());
+}
+
+function _findStates () {
+    for (var i = 0 ; i < states.children.length ; ++i) {
+        sm.addState(new StateMachine.State(
+            states.children[i].children[1].value.trim(),
+            states.children[i].children[3].value.trim()
+        ));
+    }
+}
+
+function _findTransitions () {
+    var n = transitions.children.length;
+    for (var i = 0 ; i < n ; ++i) {
+        var fromStateName = transitions.children[i].children[1].value.trim();
+        var toStateName = transitions.children[i].children[3].value.trim();
+        var conditions = transitions.children[i].children[5].value.trim();
+        var actions = transitions.children[i].children[7].value.trim();
+        
+        // From state
+        var fromState = sm.findStateByName(fromStateName);
+        if (!fromState) {
+            alert('Cannot find state "' + fromStateName + '"');
+            return;
+        }
+        
+        // To state
+        var toState = sm.findStateByName(toStateName);
+        if (!toState) {
+            alert('Cannot find state "' + toStateName + '"');
+            return;
+        }
+        
+        var transition = new StateMachine.Transition(toState.id);
+        
+        // Conditions
+        var conditionsArray = conditions.split(/[ ]*,[ ]*/);
+        if (conditionsArray[0].length > 0) {
+            for (var ic = 0 ; ic < conditionsArray.length ; ++ic) {
+                var c;
+                var type = StateMachine.Condition.TYPE_CUSTOM;
+                if (conditionsArray[ic].indexOf('$') == -1) {
+                    var parts = conditionsArray[ic].split(/[ ]+/);
+                    switch (parts[1].trim()) {
+                        case '=':
+                        case '==': {
+                            type = StateMachine.Condition.TYPE_EQUAL;
+                            break;
+                        }
+                        case '<': {
+                            type = StateMachine.Condition.TYPE_LESS_THAN;
+                            break;
+                        }
+                        case '>': {
+                            type = StateMachine.Condition.TYPE_GREATER_THAN;
+                            break;
+                        }
+                        case '<=': {
+                            type = StateMachine.Condition.TYPE_LESS_THAN_OR_EQUAL;
+                            break;
+                        }
+                        case '>=': {
+                            type = StateMachine.Condition.TYPE_GREATER_THAN_OR_EQUAL;
+                            break;
+                        }
+                        case '!=': {
+                            type = StateMachine.Condition.TYPE_NOT_EQUAL;
+                            break;
+                        }
+                    }
+                    c = new StateMachine.Condition(type, parts[0].trim(), parts[2].trim());
+                } else {
+                    var parts = conditionsArray[ic].split(/[ (&)]+/);
+                    c = new StateMachine.Condition(type, parts[1].trim(), parts[2].trim(), parts[0].replace('$', '').trim());
+                }
+                transition.addCondition(c);
+            }
+        }
+        
+        // Actions
+        var actionsArray = actions.split(/[ ]*,[ ]*/);
+        if (actionsArray[0].length > 0) {
+            for (var ic = 0 ; ic < actionsArray.length ; ++ic) {
+                var a;
+                if (actionsArray[ic].indexOf('$') == -1) {
+                    var parts = actionsArray[ic].split(/[ ]+/);
+                    a = new StateMachine.Action(parts[0].trim(), parts[2].trim());
+                } else {
+                    var parts = actionsArray[ic].split(/[ (&)]+/);
+                    a = new StateMachine.Action(parts[1].trim(), parts[2].trim(), parts[0].replace('$', '').trim());
+                }
+                transition.addAction(a);
+            }
+        }
+        
+        fromState.addTransition(transition);
+    }
+}
+
+function importData (f) {
+    // Clear current data
+    states.innerHTML = '';
+    transitions.innerHTML = '';
+    sm.clear();
+    
+    // Begin import data
+    var reader = new FileReader();
+    reader.onload = function (e) {
+        sm = new StateMachine.Machine(JSON.parse(e.target.result));
+        var sn = sm.makeStateNameMap();
+        var n = sm._states.length;
+        for (var i = 0 ; i < n ; ++i) {
+            var s = sm._states[i];
+            createState(s);
+            for (var it = 0 ; it < s._transitions.length ; ++it) {
+                createTransition(s._transitions[it], s.name, sn[''+s._transitions[it].toState]);
+            }
+        }
+    };
+    reader.readAsText(f);
+}
+
+function createState (stateData) {
+    var li              = MyDOM.create('li', [], stateHtml),
+        txtStateName    = li.children[1],
+        txtAnimation    = li.children[3];
+    txtStateName.value = stateData.name;
+    txtAnimation.value = stateData.animation;
+    states.appendChild(li);
+}
+
+function createTransition (transitionData, fromState, toState) {
+    var li              = MyDOM.create('li', [], transitionHtml),
+        txtFromState    = li.children[1],
+        txtToState      = li.children[3], 
+        txtConditions   = li.children[5], 
+        txtActions      = li.children[7];
+    
+    txtFromState.value  = fromState;
+    txtToState.value    = toState;
+    
+    var s = [];
+    for (var i = 0 ; i < transitionData._conditions.length ; ++i) {
+        var c = transitionData._conditions[i];
+        if (c.funcName) {
+            s.push ('$' + c.funcName + '(' + c.controlVar + '&' + c.value + ')');
+        } else {
+            var op = '?';
+            switch (c.type) {
+                case StateMachine.Condition.TYPE_EQUAL : {
+                    op = '==';
+                    break;
+                }
+                case StateMachine.Condition.TYPE_LESS_THAN : {
+                    op = '<';
+                    break;
+                }
+                case StateMachine.Condition.TYPE_GREATER_THAN : {
+                    op = '>';
+                    break;
+                }
+                case StateMachine.Condition.TYPE_LESS_THAN_OR_EQUAL : {
+                    op = '<=';
+                    break;
+                }
+                case StateMachine.Condition.TYPE_GREATER_THAN_OR_EQUAL : {
+                    op = '>=';
+                    break;
+                }
+                case StateMachine.Condition.TYPE_NOT_EQUAL : {
+                    op = '!=';
+                    break;
+                }
+            }
+            s.push (c.controlVar + ' ' + op + ' ' + c.value);
+        }
+    }
+    txtConditions.value = s.join(' , ');
+    
+    s = [];
+    for (var i = 0 ; i < transitionData._actions.length ; ++i) {
+        var a = transitionData._actions[i];
+        if (a.funcName) {
+            s.push ('$' + a.funcName + '(' + a.controlVar + '&' + a.value + ')');
+        } else {
+            s.push (a.controlVar + ' = ' + a.value);
+        }
+    }
+    txtActions.value = s.join(' , ');
+    
+    transitions.appendChild(li);
+}
+
+</script>
+</body>
+</html>

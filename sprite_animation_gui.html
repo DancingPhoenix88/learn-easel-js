@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" >
+<title>Sprite Animation GUI</title>
+<style>
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#imagesList {
+    height: 100%;
+    width: 60%;
+    float: left;
+    overflow: scroll;
+}
+
+#importExport, #preview, #animationsList {
+    width: 40%;
+    float: right;
+}
+
+#importExport {
+    height: 10%;
+}
+
+#preview {
+    height: 30%;
+}
+
+#animationsList {
+    height: 60%;
+    overflow-y: auto;
+}
+
+#animationsListUl {
+    height: 80%;
+    overflow-y: scroll;
+}
+
+ul, ol, li {
+    margin:0;
+    padding:0;
+}
+
+ul {
+    list-style-type: none;
+    
+}
+
+.ImageFrames {
+    position: relative;
+}
+
+img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+.Frames li {
+    z-index: 2;
+    display: block;
+    position: absolute;
+    border: 5px solid rgba(0, 153, 153, 0.3);
+    background-color: rgba(0, 0, 0, 0);
+    color: #0FF;
+    font-size: 30px;
+    font-weight: bold;
+    font-family: 'Trebuchet MS';
+    text-align: center;
+    text-shadow: 1px 1px 2px #000;
+}
+
+#animationsListUl li {
+    padding: 10px 0;
+}
+
+#animationsListUl li:hover {
+    background-color: #0FF;
+}
+
+input[type="range"] + span:after {
+    content: '%';
+}
+
+.AnimationFrames {
+    display: block;
+    width: 90%;
+    margin: 0 auto;
+}
+
+canvas {
+    box-shadow: 1px 1px 3px #000;
+    width: 100%;
+    height: 100%;
+}
+
+#txtX, #txtY {
+    width: 35px;
+}
+
+.PreviewControls {
+    position: relative;
+    margin-top: -50px;
+    z-index: 100;
+}
+
+#frameStat {
+    margin-left: 10px;
+}
+
+#frameStatMax:before {
+    content:"/";
+}
+
+#frameStatMax:after {
+    content:")";
+}
+
+#duration {
+    float: right;
+    margin-right: 10px;
+}
+
+#duration:before {
+    content: "Duration: ";
+}
+
+#duration:after {
+    content: "ms";
+}
+
+.Triggers {
+    margin-left: 20px;
+}
+
+.Triggers input[type="number"] {
+    width: 40px;
+}
+</style>
+</head>
+<body>
+<div id="imagesList">
+    Path: <input type="text" id="txtPath"/>
+    Add Image: <input type="file" onchange="addImage(this.files[0]);"/>
+    <ol id="imagesListUl" onmousedown="onClickImages(event);"></ol>
+</div>
+<div id="importExport">
+    <div>Import: <input type="file" onchange="onImport(this.files[0]);this.disabled=true;"/></div>
+    <div>
+        <button type="button" onclick="onExport();">Export</button>
+        <button type="button" onclick="onSave();">Save</button>
+    </div>
+</div>
+<div id="preview">
+    <canvas id="stage"></canvas>
+    <div class="PreviewControls">
+        <span>X:</span>
+        <input type="number" id="txtX" placeholder="X Coordinate"/>
+        <span>Y:</span>
+        <input type="number" id="txtY" placeholder="Y Coordinate"/>
+        <span id="frameStat"></span>
+        <span id="frameStatMax"></span>
+        <span id="duration"></span>
+        <br/>
+        <button type="button" title="Play" onclick="playAnimation();">&gt;</button>
+        <!-- <button type="button" title="Stop" onclick="stopAnimation();">||</button> -->
+        <button type="button" title="Previous frame" onclick="prevAnimationFrame();">|&lt;</button>
+        <button type="button" title="Next frame" onclick="nextAnimationFrame();">&gt;|</button>
+        <button type="button" title="Add trigger" onclick="addTrigger();">+</button>
+        <input id="rangeGlobalSpeed" type="range" min="1" max="100" onchange="onChangeRange(this);" value="100"/>
+        <span></span>
+    </div>
+</div>
+<div id="animationsList">
+    <h1>Animations</h1>
+    <button type="button" onclick="addAnimation();">Add animation</button>
+    <ul id="animationsListUl">
+        <!-- Sample
+        <li>
+            <input type="radio" name="animation"/>
+            <input type="text" placeholder="Animation name"/>
+            <input type="range" min="1" max="100" onchange="onChangeRange(this);"/>
+            <span></span>
+            <input type="text" placeholder="Frames" class="AnimationFrames"/>
+            <ul class="Triggers">
+                <li>
+                    <span>Frame:</span>
+                    <input type="number" title="Frame number" placeholder="Frame number"/>
+                    <span>Trigger:</span>
+                    <input type="text" title="Trigger name" placeholder="Trigger name"/>
+                    <button type="button" title="Remove trigger">X</button>
+                </li>
+            </ul>
+        </li>
+         -->
+    </ul>
+</div>
+
+<script src="JS/DOM.js"></script>
+<script src="JS/easeljs.js"></script>
+<script src="JS/EaselJsUtil.js"></script>
+<script src="JS/BasePreload.class.js"></script>
+<script>
+// IMAGES LIST
+//------------------------------------------------------------------------------
+var images          = MyDOM.get('imagesListUl')
+    , imageHtml     = '<hr/><h2></h2><div class="ImageFrames"><img/><ul class="Frames"></ul></div><input type="hidden"/><span>Frames : </span><input type="file" onchange="onSelectFrames(this, this.files[0]);"/>'
+    , txtPath       = MyDOM.get('txtPath')
+    , borderWidth   = 5
+;
+function addImage (f) {
+    // Create
+    var li              = MyDOM.create('li', [], imageHtml)
+        , imageNameNode = li.children[1]
+        , imageNode     = li.children[2].children[0]
+        //, framesNode    = li.children[2].children[1]
+    ;
+    
+    // Set content
+    imageNameNode.textContent = f.name;
+    imageNode.onload = stretchParent.bind(imageNode);
+    MyDOM.displayImageFile(imageNode, f);
+    
+    // Display
+    images.appendChild(li);
+}
+
+function stretchParent () {
+    this.parentNode.style.height = this.clientHeight + 'px';
+}
+
+function onSelectFrames (input, f) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+        var newFrames       = e.target.result
+            , imgNode       = input.parentNode
+            , framesNode    = imgNode.children[2].children[1]
+            , framesDataNode= imgNode.children[3]
+        ;
+        
+        drawFrames(framesNode, JSON.parse(newFrames));
+        framesDataNode.value = newFrames;
+        needParsing = true;
+    }
+    reader.readAsText(f);
+}
+
+function drawFrames (framesNode, framesData) {
+    var s = '';
+    for (var fi = 0 ; fi < framesData.length ; ++fi) {
+        s += '<li style="left: ' + (framesData[fi][0] - borderWidth) + 'px; top: ' + (framesData[fi][1] - borderWidth) + 'px; width: ' + framesData[fi][2] + 'px; height: ' + framesData[fi][3] + 'px;">'+fi+'</li>';
+    }
+    framesNode.innerHTML = s;
+}
+
+// IMPORT
+//------------------------------------------------------------------------------
+var ssOptions = {
+    images              : [],
+    frames              : [],
+    animations          : {},
+    extraData           : {},   // Frames count, durations, triggers
+    
+    workGlobalSpeed     : 1,    // Global speed which was set from last edit
+    workPath            : '',   // Path of images
+    workImagesFrames    : [],   // Frames of images, which was exported by Sprite Inspector
+    workAnimations      : {},   // Animation frames, use independent frames (image index included)
+    workExtraData       : []    // Triggers
+}
+;
+function onImport (f) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+        ssOptions = JSON.parse(e.target.result);
+        
+        // Path
+        txtPath.value = ssOptions.workPath;
+        
+        // Global animation speed
+        rangeGlobalSpeed.value = ssOptions.workGlobalSpeed * 100;
+        onChangeRange(rangeGlobalSpeed);
+        
+        // Images list
+        images.innerHTML = '';
+        var n = ssOptions.images.length;
+        for (var i = 0 ; i < n ; ++i) {
+            var imgData         = ssOptions.images[i]
+                , framesData    = ssOptions.workImagesFrames[i]
+                , li            = MyDOM.create('li', [], imageHtml)
+                , imageNameNode = li.children[1]
+                , imageNode     = li.children[2].children[0]
+                , framesNode    = li.children[2].children[1]
+                , framesDataNode= li.children[3]
+            ;
+            
+            imageNameNode.textContent = imgData.replace(ssOptions.workPath, '');
+            imageNode.onload = stretchParent.bind(imageNode);
+            imageNode.src = imgData;
+            drawFrames(framesNode, framesData);
+            framesDataNode.value = JSON.stringify(framesData);
+            
+            images.appendChild(li);
+        }
+        
+        //Animations list && triggers
+        animationsListUl.innerHTML = '';
+        n = ssOptions.workAnimations.length;
+        for (var i = 0 ; i < n ; ++i) {
+            var animData                = ssOptions.workAnimations[i]
+                , triggerData           = ssOptions.workExtraData[i].triggers
+                , li                    = MyDOM.create('li', [], animationHTML)
+                //, radioNode             = li.children[0]
+                , txtAnimNameNode       = li.children[1]
+                , rangeAnimSpeedNode    = li.children[2]
+                , txtFramesNode         = li.children[4]
+                , triggersList          = li.children[5]
+            ;
+            
+            txtAnimNameNode.value = animData.name;
+            rangeAnimSpeedNode.value = animData.speed;
+            onChangeRange(rangeAnimSpeedNode);
+            txtFramesNode.value = animData.frames;
+            
+            var nt = triggerData.length;
+            for (var it = 0 ; it < nt ; ++it) {
+                var liTrigger           = MyDOM.create('li', [], triggerHTML)
+                    , txtFrameNumber    = liTrigger.children[1]
+                    , txtTrigger        = liTrigger.children[3]
+                ;
+                txtFrameNumber.value = triggerData[it].frameNumber;
+                txtTrigger.value = triggerData[it].triggerName;
+                triggersList.appendChild(liTrigger);
+            }
+            
+            animationsListUl.appendChild(li);
+        }
+        
+        // Auto play first animation
+        animationsListUl.children[0].children[0].click();
+        playAnimation();
+    };
+    reader.readAsText(f);
+}
+
+// PREVIEW
+//------------------------------------------------------------------------------
+var stage, ss, actor, sw, sh, reg;
+function initStage () {
+    stage = new createjs.Stage('stage');
+    sw = stage.canvas.width = stage.canvas.clientWidth;
+    sh = stage.canvas.height = stage.canvas.clientHeight;
+    txtX.value = Math.round(sw / 2);
+    txtY.value = Math.round(sh / 2);
+    
+    reg = new createjs.Shape();
+    reg.graphics.f('red').dc(0, 0, 3);
+    stage.addChild(reg);
+    
+    createjs.Ticker.setFPS(60);
+    createjs.Ticker.addEventListener("tick", onTick);
+}
+
+function onTick () {
+    if (actor) {
+        var x = parseInt(txtX.value)
+           , y = parseInt(txtY.value)
+       ;
+        if (actor.x != x || actor.y != y) {
+            actor.setTransform(x, y);
+            reg.setTransform(x, y);
+        }
+        if (!actor.paused) {
+            var f = Math.floor(actor.currentAnimationFrame);
+            frameStat.textContent = playingFrameIndices[f] + ' (' + (f + 1);
+        }
+    } else {
+        frameStat.textContent = '';
+    }
+    stage.update();
+}
+
+var needParsing = true;
+function _parse (forExport) {
+    if (!needParsing && !forExport) {
+        return;
+    }
+    ssOptions.workPath = txtPath.value;
+    
+    // Global animation speed
+    ssOptions.workGlobalSpeed = rangeGlobalSpeed.value * 0.01;
+    
+    // Images
+    ssOptions.images = [];
+    var i, n = images.children.length;
+    for (i = 0 ; i < n ; ++i) {
+        var imgPath = ssOptions.workPath + images.children[i].children[1].textContent.trim();
+        ssOptions.images.push(imgPath);
+    }
+    
+    // Frames
+    ssOptions.frames = [];
+    ssOptions.workImagesFrames = [];
+    var accFramesCount    = [];
+    for (i = 0 ; i < n ; ++i) {
+        var f = JSON.parse(images.children[i].children[3].value);
+        
+        if (i > 0) {
+            accFramesCount[i] = accFramesCount[i-1] + f.length;
+        } else {
+            accFramesCount[i] = f.length;
+        }
+        
+        ssOptions.workImagesFrames.push(f);
+        
+        for (var fi = 0 ; fi < f.length ; ++fi) {
+            ssOptions.frames.push([
+                f[fi][0], //x
+                f[fi][1], //y
+                f[fi][2], //w
+                f[fi][3], //h
+                i,        //image index
+                f[fi][4], //regX
+                f[fi][5]  //regY
+            ]);
+        }
+    }
+    
+    // Animations
+    ssOptions.animations = {};
+    ssOptions.workAnimations = [];
+    n = animationsListUl.children.length;
+    for (i = 0 ; i < n ; ++i) {
+        var animNode        = animationsListUl.children[i]
+            , animName      = animNode.children[1].value.trim()
+            , speed         = parseInt(animNode.children[2].value.trim())
+            , framesData    = animNode.children[4].value.replace(' ', '')
+            , splittedFrames= framesData.split(',')
+            , inGameFrames  = []
+        ;
+        
+        for (var fi = 0 ; fi < splittedFrames.length ; ++fi) {
+            var parts = splittedFrames[fi].split('-')
+                , imgIndex      = parseInt(parts[0])
+                , frameIndex    = parseInt(parts[1])
+            ;
+            if (imgIndex > 0) {
+                inGameFrames.push(accFramesCount[imgIndex - 1] + frameIndex);
+            } else {
+                inGameFrames.push(frameIndex);
+            }
+        }
+        
+        ssOptions.workAnimations.push({
+            name : animName,
+            frames : framesData,
+            speed : speed
+        });
+        ssOptions.animations[animName] = {
+            frames : inGameFrames,
+            speed : speed * 0.01 * (forExport ? 1 : ssOptions.workGlobalSpeed)
+        };
+    }
+    
+    // Extra data (frames count, duration, triggers)
+    ssOptions.extraData = {};
+    ssOptions.workExtraData = [];
+    for (i = 0 ; i < n ; ++i) {
+        var animNode        = animationsListUl.children[i]
+            , animName      = animNode.children[1].value.trim()
+            , triggerNodes  = animNode.children[5].children
+            , triggers      = {}
+            , workTriggers  = []
+            , anim          = ssOptions.animations[animName]
+            , fc            = anim.frames.length
+            , nt            = triggerNodes.length
+        ;
+        
+        for (var it = 0 ; it < nt ; ++it) {
+            var f   = triggerNodes[it].children[1].value.trim()
+                , t = triggerNodes[it].children[3].value.trim()
+            ;
+            if (!triggers[f]) {
+                triggers[f] = [];
+            }
+            triggers[f].push(t);
+            workTriggers.push({
+                frameNumber : f,
+                triggerName : t
+            });
+        }
+        
+        ssOptions.extraData[animName] = {
+            framesCount : fc,
+            durations   : {
+                //30      : Math.round(createjs.Sprite.getDuration(fc, anim.speed, 30)),
+                //40      : Math.round(createjs.Sprite.getDuration(fc, anim.speed, 40)),
+                60      : Math.round(createjs.Sprite.getDuration(fc, anim.speed, 60))
+            },
+            hasTrigger  : (nt > 0) ? true : false,
+            triggers    : triggers
+        };
+        
+        ssOptions.workExtraData.push({
+            triggers    : workTriggers
+        });
+    }
+    
+    needParsing = forExport ? true : false;
+}
+
+function prepareAnim () {
+    _parse();
+    ss = new createjs.SpriteSheet(ssOptions);
+    
+    var bp = new BasePreload();
+    bp.load(ss);
+    bp.onFinish(setupStage);
+}
+
+function setupStage () {
+    if (actor) {
+        actor.uncatchTriggers();
+        stage.removeChild(actor);
+    }
+    actor = new createjs.Sprite(ss);
+    actor.extraData = ssOptions.extraData;
+    actor.catchTriggers();
+    
+    var x = parseInt(txtX.value), y = parseInt(txtY.value);
+    actor.setTransform(x, y);
+    stage.addChild(actor);
+    
+    reg.setTransform(x, y);
+    
+    beginPlaying();
+}
+
+function beginPlaying () {
+    actor.animate(selectedAnim);
+    playingFrames = actor.spriteSheet.getAnimation(selectedAnim).frames;
+    playingFrameIndices = selectedAnimFrames.value.split(',');
+    frameStatMax.textContent = playingFrames.length;
+    duration.textContent = Math.round(actor.getCurrentElapsedTime(60));
+}
+
+document.body.onload = initStage;
+
+// PREVIEW CONTROLS
+//------------------------------------------------------------------------------
+var rangeGlobalSpeed    = MyDOM.get('rangeGlobalSpeed')
+    , txtX              = MyDOM.get('txtX')
+    , txtY              = MyDOM.get('txtY')
+    , frameStat         = MyDOM.get('frameStat')
+    , frameStatMax      = MyDOM.get('frameStatMax')
+    , duration          = MyDOM.get('duration')
+    , playingFrames     = []
+    , curFrame          = 0
+    , playingFrameIndices = []
+;
+
+function onChangeRange(range) {
+    range.nextElementSibling.textContent = range.value;
+    needParsing = true;
+}
+
+function playAnimation () {
+    prepareAnim(); // -> setupStage -> beginPlaying
+}
+
+function stopAnimation () {
+    if (actor) {
+        actor.paused = true;
+        curFrame = Math.floor(actor.currentAnimationFrame);
+    }
+}
+
+function prevAnimationFrame () {
+    if (actor) {
+        if (!actor.paused) {
+            stopAnimation();
+        }
+        curFrame = (curFrame + playingFrames.length - 1) % (playingFrames.length);
+        actor.gotoAndStop(playingFrames[curFrame]);
+        frameStat.textContent = playingFrameIndices[curFrame] + ' (' + (curFrame + 1);
+    }
+}
+
+function nextAnimationFrame () {
+    if (actor) {
+        if (!actor.paused) {
+            stopAnimation();
+        }
+        curFrame = (curFrame + 1) % (playingFrames.length);
+        actor.gotoAndStop(playingFrames[curFrame]);
+        frameStat.textContent = playingFrameIndices[curFrame] + ' (' + (curFrame + 1);
+    }
+}
+
+// ANIMATIONS LIST
+//------------------------------------------------------------------------------
+var animationsListUl    = MyDOM.get('animationsListUl')
+    , animationHTML     = '<input type="radio" name="animation" onclick="selectAnim(this);"/><input type="text" placeholder="Animation name" onchange="onChangeAnimName(this, this.value);"/><input type="range" min="1" max="100" value="100" onchange="onChangeRange(this);"/><span></span><input type="text" placeholder="Frames" class="AnimationFrames" onchange="onChangeAnimFrames();"/><ul class="Triggers"></ul>'
+    , triggerHTML       = '<span>Frame:</span><input type="number" title="Frame number" placeholder="Frame number" onchange="onChangeTrigger();"/><span>Trigger:</span><input type="text" title="Trigger name" placeholder="Trigger name" onchange="onChangeTrigger();"/><button type="button" title="Remove trigger" onclick="removeTrigger(this.parentNode);">X</button>'
+    , selectedAnim      = ''
+    , selectedAnimFrames= undefined
+    , lastImgIndex      = -1
+    , lastFrameIndex    = -1
+;
+    
+function selectAnim (radio) {
+    selectedAnim = radio.nextElementSibling.value;
+    selectedAnimFrames = radio.parentNode.children[4];
+}
+
+function addAnimation () {
+    // Create
+    var li              = MyDOM.create('li', [], animationHTML)
+        , radioNode             = li.children[0]
+        , txtAnimNameNode       = li.children[1]
+        //, rangeAnimSpeedNode    = li.children[2]
+    ;
+    
+    // Display
+    animationsListUl.appendChild(li);
+    radioNode.click();
+    txtAnimNameNode.focus();
+}
+
+function onClickImages (event) {
+    MyDOM.keepEventOnlyForMe(event);
+    var node = event.target;
+    while (node != images && node.nodeName != 'LI') {
+        node = node.parentNode;
+    }
+    if (node.parentNode.className == 'Frames') {
+        var frameIndex = node.textContent;
+        
+        node = node.parentNode;
+        while (node != images && node.nodeName != 'LI') {
+            node = node.parentNode;
+        }
+        if (node.parentNode == images) {
+            var imageIndex = -1;
+            for (var i = 0 ; i < images.children.length ; ++i) {
+                if (node == images.children[i]) {
+                    imageIndex = i;
+                    break;
+                }
+            }
+            if (imageIndex > -1) {
+                onPick(frameIndex, imageIndex, event.shiftKey);
+            }
+        }
+    }
+}
+
+function onPick (frameIndex, imageIndex, multiPick) {
+    frameIndex = parseInt(frameIndex);
+    imageIndex = parseInt(imageIndex);
+    if (selectedAnimFrames) {
+        if (multiPick) {
+            if (lastImgIndex > -1 && lastImgIndex == imageIndex) {
+                if (lastFrameIndex > -1 && lastFrameIndex != frameIndex) {
+                    var indices = [];
+                    if (lastFrameIndex < frameIndex) {
+                        for (var i = lastFrameIndex + 1 ; i <= frameIndex ; ++i) {
+                            indices.push(i);
+                        }
+                    } else {
+                        for (var i = lastFrameIndex - 1 ; i >= frameIndex ; --i) {
+                            indices.push(i);
+                        }
+                    }
+                    pickMulti(indices, imageIndex);
+                    return;
+                }
+            }
+        }
+        pickSingle(frameIndex, imageIndex);
+    } else {
+        alert('Please select animation first!');
+    }
+}
+
+function pickSingle (frameIndex, imageIndex) {
+    s = imageIndex + '-' + frameIndex;
+    if (selectedAnimFrames.value.trim().length > 0) {
+        selectedAnimFrames.value += ',' + s;
+    } else {
+        selectedAnimFrames.value = s;
+    }
+    
+    lastImgIndex = imageIndex;
+    lastFrameIndex = frameIndex;
+    
+    needParsing = true;
+}
+
+function pickMulti (frameIndices, imageIndex) {
+    for (var i = 0 ; i < frameIndices.length ; ++i) {
+        pickSingle(frameIndices[i], imageIndex);
+    }
+    lastImgIndex = -1;
+    lastFrameIndex = -1;
+}
+
+function onChangeAnimFrames () {
+    needParsing = true;
+}
+
+function onChangeAnimName (txtName, newName) {
+    needParsing = true;
+    if (txtName.parentNode.children[0].checked) {
+        selectedAnim = newName;
+    }
+}
+
+function addTrigger () {
+    if (!actor.paused) {
+        alert('You can only add trigger if animation is paused!');
+        return;
+    }
+    var triggersList        = selectedAnimFrames.parentNode.children[5]
+        , li                = MyDOM.create('li', [], triggerHTML)
+        , txtFrameNumber    = li.children[1]
+        , txtTrigger        = li.children[3]
+    ;
+    
+    txtFrameNumber.value = (curFrame + 1);
+    
+    triggersList.appendChild(li);
+    
+    txtTrigger.focus();
+}
+
+function removeTrigger (trigger) {
+    if (!confirm('Do you really want to remove this trigger?')) {
+        return;
+    }
+    trigger.parentNode.removeChild(trigger);
+    needParsing = true;
+}
+
+function onChangeTrigger () {
+    needParsing = true;
+}
+
+// EXPORT
+//------------------------------------------------------------------------------
+function onExport () {
+    _parse(true);
+    var output = {
+        images      : ssOptions.images,
+        frames      : ssOptions.frames,
+        animations  : ssOptions.animations,
+        extraData   : ssOptions.extraData
+    };
+    alert('Please check console!');
+    console.log(JSON.stringify(output));
+}
+
+function onSave () {
+    _parse();
+    var output = {
+        images             : ssOptions.images,
+        workExtraData      : ssOptions.workExtraData,
+        workGlobalSpeed    : ssOptions.workGlobalSpeed,
+        workPath           : ssOptions.workPath,
+        workImagesFrames   : ssOptions.workImagesFrames,
+        workAnimations     : ssOptions.workAnimations
+    };
+    alert('Please check console!');
+    console.log(JSON.stringify(output));
+}
+</script>
+</body>
+</html>

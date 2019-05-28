@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" >
+<title>Input</title>
+</head>
+<body>
+
+<canvas id="myCanvas" width="800" height="400" style="box-shadow: 0 3px 5px #666;">
+    Your browser doesn't support HTML5
+</canvas>
+<span id="txtFPS"></span>
+
+<script src="JS/easeljs.js"></script>
+<script src="JS/BasePreload.class.js"></script>
+<script src="JS/StateMachine.class.js"></script>
+<script src="JS/EaselJsUtil.js"></script>
+<script src="JS/TweenMax.min.js"></script>
+<script src="JS/DOM.js"></script>
+<script src="JS/Keyboard.class.js"></script>
+<script src="JS/InputManager.class.js"></script>
+<script>
+var stage, spriteSheet, actor;
+var run_speed = 0.2;
+var screenWidth, screenHeight;
+var maxJumpHeight = 100;
+var txtFPS = document.getElementById('txtFPS');
+
+var ssOptions = JSON.parse('{"images":["Images/zero.png","Images/zero2.png","Images/zero3.png","Images/zero4.png","Images/zero5.png","Images/zero6.png"],"frames":[[5,0,45,53,0,4,50],[50,0,45,53,0,4,50],[95,0,45,54,0,3,51],[140,0,45,53,0,3,50],[0,159,48,52,0,0,52],[48,159,44,52,0,0,52],[92,159,48,52,0,0,52],[150,159,52,52,0,0,52],[205,159,52,52,0,0,52],[260,159,50,52,0,0,52],[314,159,50,52,0,0,52],[366,159,46,52,0,0,52],[418,159,50,52,0,0,52],[474,159,52,52,0,0,52],[530,159,52,52,0,0,52],[582,159,52,52,0,0,52],[639,159,52,52,0,0,52],[694,159,48,52,0,0,52],[745,159,45,52,0,0,52],[794,159,49,52,0,0,52],[13,86,42,52,0,0,52],[59,86,47,56,0,0,56],[110,86,47,56,0,0,56],[162,86,47,56,0,0,56],[213,86,47,55,0,0,55],[263,86,42,52,0,0,52],[308,86,42,55,0,0,55],[353,84,42,65,0,0,65],[395,74,42,79,0,0,79],[442,71,42,79,0,0,79],[488,90,42,60,0,0,60],[6,285,42,60,0,1,60],[51,285,49,60,0,7,60],[102,283,51,62,0,4,62],[156,283,80,64,0,5,64],[242,283,88,61,0,5,61],[336,294,94,50,0,10,50],[436,294,87,50,0,2,50],[526,294,75,50,0,0,50],[606,294,63,50,0,0,50],[677,293,56,50,0,0,50],[737,293,49,50,0,0,50],[801,291,52,50,0,7,50],[7,358,68,50,0,0,50],[81,358,86,50,0,0,50],[172,358,106,50,0,17,50],[286,358,74,50,0,30,50],[355,358,74,50,0,31,50],[429,358,58,50,0,15,50],[492,358,53,50,0,6,50],[561,358,49,50,0,8,48],[610,358,49,50,0,6,48],[661,358,49,50,0,6,48],[4,418,49,63,0,4,63],[58,418,57,63,0,11,63],[133,418,98,67,0,0,67],[243,418,106,74,0,0,68],[358,418,106,74,0,0,62],[472,418,108,74,0,0,66],[587,418,76,74,0,0,63],[677,418,63,74,0,0,64],[743,418,57,74,0,0,63],[810,430,54,50,0,0,50],[874,431,55,49,0,0,49],[929,431,48,49,0,0,49],[4,0,45,55,1,4,53],[52,0,45,55,1,4,52],[98,0,45,55,1,4,53],[147,0,45,55,1,4,52],[195,0,45,52,1,3,50],[243,0,45,53,1,5,51],[294,0,45,55,1,3,52],[339,0,45,55,1,5,52],[390,0,50,53,1,9,51],[440,0,64,52,1,22,51],[508,0,72,53,1,28,51],[580,0,63,52,1,20,52],[6,63,103,50,1,6,50],[117,63,100,50,1,6,50],[225,63,117,50,1,6,50],[344,63,158,50,1,7,50],[505,63,151,50,1,5,50],[100,124,151,45,1,6,45],[253,124,148,45,1,6,45],[404,124,156,42,1,5,42],[151,174,130,47,1,3,47],[284,174,112,47,1,6,47],[400,174,67,47,1,0,47],[471,174,41,47,1,0,47],[7,32,50,52,2,4,52],[59,32,83,61,2,9,52],[144,0,71,99,2,12,99],[219,0,71,99,2,13,99],[292,0,71,99,2,13,99],[368,0,71,99,2,12,99],[441,0,71,99,2,12,99],[516,0,71,99,2,12,99],[16,107,71,98,2,12,97],[92,107,71,98,2,12,98],[168,107,71,98,2,12,98],[243,107,71,98,2,13,98],[318,107,71,98,2,13,98],[391,107,71,98,2,15,98],[470,107,53,98,2,13,99],[524,127,43,70,2,13,70],[3,8,57,82,3,27,60],[66,8,82,82,3,58,58],[155,31,84,82,3,60,31],[239,38,80,82,3,56,24],[321,38,60,82,3,33,24],[387,38,80,82,3,22,23],[471,14,85,82,3,23,49],[560,8,78,82,3,23,56],[4,0,67,48,4,3,44],[72,0,61,48,4,3,42],[136,0,98,48,4,2,45],[236,0,118,48,4,2,45],[355,0,106,48,4,1,45],[61,58,77,48,4,2,44],[138,58,59,48,4,10,46],[197,58,52,48,4,10,44],[249,58,50,48,4,7,44],[299,58,50,48,4,6,44],[349,58,47,48,4,4,43],[53,0,45,74,5,3,64],[103,0,43,74,5,3,65],[155,0,45,74,5,1,65],[206,0,51,74,5,5,66],[264,0,58,74,5,3,67],[325,0,58,74,5,4,68],[390,0,67,74,5,2,67],[12,81,86,74,5,16,61],[104,81,82,74,5,10,68],[188,81,67,74,5,2,65],[257,81,55,74,5,2,65],[315,81,53,74,5,1,65],[371,81,53,74,5,2,65],[429,81,53,74,5,1,65],[22,161,53,74,5,1,67],[82,161,53,74,5,2,67],[145,161,53,74,5,2,67],[208,161,53,74,5,2,67],[268,161,53,74,5,2,67],[328,161,53,74,5,1,66],[389,161,53,74,5,1,68],[445,161,53,74,5,2,67]],"animations":{"idle":{"frames":[0,1,2,3],"speed":0.1},"idle_to_run":{"frames":[4,5],"speed":0.4},"run_to_idle":{"frames":[5,4],"speed":0.4},"run":{"frames":[6,7,8,9,10,11,12,13,14,15,16,17,18,19],"speed":0.4},"jump":{"frames":[20,21,22,23,24,25,26,27,28,29,30,20],"speed":0.2},"skill_3":{"frames":[112,111,110,109,108,107,106,105],"speed":0.4},"skill_1":{"frames":[65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88],"speed":0.3},"skill_2":{"frames":[89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,104,104,104,104,104,104,104,104,104,104,104,104,104,104,104,104],"speed":0.5},"attack_1":{"frames":[31,32,33,34,35,36,37,38,39,40,41,42],"speed":0.4},"attack_2":{"frames":[43,44,45,46,47,48,49,50,51,52],"speed":0.4},"attack_3":{"frames":[53,54,55,56,57,58,59,60,61,62,63,64],"speed":0.4},"skill_4":{"frames":[113,114,115,116,117,118,119,120,121,122,123],"speed":0.3},"skill_5":{"frames":[124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145],"speed":0.3}},"extraData":{"idle":{"framesCount":4,"durations":{"60":667},"hasTrigger":false,"triggers":{}},"idle_to_run":{"framesCount":2,"durations":{"60":83},"hasTrigger":false,"triggers":{}},"run_to_idle":{"framesCount":2,"durations":{"60":83},"hasTrigger":false,"triggers":{}},"run":{"framesCount":14,"durations":{"60":583},"hasTrigger":false,"triggers":{}},"jump":{"framesCount":12,"durations":{"60":1000},"hasTrigger":false,"triggers":{}},"skill_3":{"framesCount":8,"durations":{"60":333},"hasTrigger":false,"triggers":{}},"skill_1":{"framesCount":24,"durations":{"60":1333},"hasTrigger":false,"triggers":{}},"skill_2":{"framesCount":32,"durations":{"60":1067},"hasTrigger":false,"triggers":{}},"attack_1":{"framesCount":12,"durations":{"60":500},"hasTrigger":false,"triggers":{}},"attack_2":{"framesCount":10,"durations":{"60":417},"hasTrigger":false,"triggers":{}},"attack_3":{"framesCount":12,"durations":{"60":500},"hasTrigger":false,"triggers":{}},"skill_4":{"framesCount":11,"durations":{"60":611},"hasTrigger":false,"triggers":{}},"skill_5":{"framesCount":22,"durations":{"60":1222},"hasTrigger":true,"triggers":{"6":["beginShaking"],"18":["endShaking"]}}}}');
+var stateMachine = new StateMachine.Machine(JSON.parse('[{"id":1,"name":"idle","animation":"idle","transitions":[{"id":1,"toState":2,"conditions":[{"id":1,"type":0,"controlVar":"isRunning","value":"1"}],"actions":[]},{"id":2,"toState":5,"conditions":[{"id":2,"type":0,"controlVar":"isJumping","value":"1"}],"actions":[{"id":1,"controlVar":"skill","value":0},{"id":2,"controlVar":"onGround","value":0},{"id":3,"controlVar":"jump","value":0,"funcName":"jump"}]},{"id":3,"toState":6,"conditions":[{"id":3,"type":0,"controlVar":"skill","value":"1"}],"actions":[]},{"id":4,"toState":8,"conditions":[{"id":4,"type":2,"controlVar":"attack","value":"0"}],"actions":[]},{"id":5,"toState":11,"conditions":[{"id":5,"type":0,"controlVar":"skill","value":"2"}],"actions":[{"id":4,"controlVar":"skill_2","value":0,"funcName":"jump"}]},{"id":6,"toState":14,"conditions":[{"id":6,"type":0,"controlVar":"skill","value":"5"}],"actions":[]}]},{"id":2,"name":"idle_to_run","animation":"idle_to_run","transitions":[{"id":7,"toState":1,"conditions":[{"id":7,"type":0,"controlVar":"isRunning","value":"0"}],"actions":[]},{"id":8,"toState":3,"conditions":[{"id":8,"type":0,"controlVar":"animEnd","value":"1"}],"actions":[]}]},{"id":3,"name":"run","animation":"run","transitions":[{"id":9,"toState":4,"conditions":[{"id":9,"type":0,"controlVar":"isRunning","value":"0"}],"actions":[]},{"id":10,"toState":7,"conditions":[{"id":10,"type":0,"controlVar":"isJumping","value":"1"}],"actions":[{"id":5,"controlVar":"skill","value":0},{"id":6,"controlVar":"onGround","value":0},{"id":7,"controlVar":"jump","value":0,"funcName":"jump"}]},{"id":11,"toState":6,"conditions":[{"id":11,"type":0,"controlVar":"skill","value":"1"}],"actions":[{"id":8,"controlVar":"isRunning","value":0}]},{"id":12,"toState":8,"conditions":[{"id":12,"type":2,"controlVar":"attack","value":"0"}],"actions":[{"id":9,"controlVar":"isRunning","value":0}]},{"id":13,"toState":11,"conditions":[{"id":13,"type":0,"controlVar":"skill","value":"2"}],"actions":[{"id":10,"controlVar":"isRunning","value":0},{"id":11,"controlVar":"skill_2","value":0,"funcName":"jump"}]},{"id":14,"toState":13,"conditions":[{"id":14,"type":0,"controlVar":"skill","value":"4"}],"actions":[]}]},{"id":4,"name":"run_to_idle","animation":"run_to_idle","transitions":[{"id":15,"toState":1,"conditions":[{"id":15,"type":0,"controlVar":"animEnd","value":"1"}],"actions":[]}]},{"id":5,"name":"jump","animation":"jump","transitions":[{"id":16,"toState":1,"conditions":[{"id":16,"type":0,"controlVar":"animEnd","value":"1"}],"actions":[{"id":12,"controlVar":"isJumping","value":0}]},{"id":17,"toState":12,"conditions":[{"id":17,"type":0,"controlVar":"skill","value":"3"}],"actions":[{"id":13,"controlVar":"isJumping","value":0},{"id":14,"controlVar":"0","value":0,"funcName":"cancelJump"}]}]},{"id":6,"name":"skill_1","animation":"skill_1","transitions":[{"id":18,"toState":1,"conditions":[{"id":18,"type":0,"controlVar":"animEnd","value":"1"}],"actions":[{"id":15,"controlVar":"skill","value":0}]}]},{"id":7,"name":"jump_when_running","animation":"jump","transitions":[{"id":19,"toState":3,"conditions":[{"id":19,"type":0,"controlVar":"animEnd","value":"1"},{"id":20,"type":0,"controlVar":"isRunning","value":"1"}],"actions":[{"id":16,"controlVar":"isJumping","value":0}]},{"id":20,"toState":1,"conditions":[{"id":21,"type":0,"controlVar":"animEnd","value":"1"}],"actions":[{"id":17,"controlVar":"isJumping","value":0}]},{"id":21,"toState":12,"conditions":[{"id":22,"type":0,"controlVar":"skill","value":"3"}],"actions":[{"id":18,"controlVar":"isJumping","value":0},{"id":19,"controlVar":"0","value":0,"funcName":"cancelJump"}]}]},{"id":8,"name":"attack_1","animation":"attack_1","transitions":[{"id":22,"toState":9,"conditions":[{"id":23,"type":0,"controlVar":"animEnd","value":"1"},{"id":24,"type":2,"controlVar":"attack","value":"1"}],"actions":[]},{"id":23,"toState":1,"conditions":[{"id":25,"type":0,"controlVar":"animEnd","value":"1"}],"actions":[{"id":20,"controlVar":"attack","value":0}]}]},{"id":9,"name":"attack_2","animation":"attack_2","transitions":[{"id":24,"toState":10,"conditions":[{"id":26,"type":0,"controlVar":"animEnd","value":"1"},{"id":27,"type":2,"controlVar":"attack","value":"2"}],"actions":[]},{"id":25,"toState":1,"conditions":[{"id":28,"type":0,"controlVar":"animEnd","value":"1"}],"actions":[{"id":21,"controlVar":"attack","value":0}]}]},{"id":10,"name":"attack_3","animation":"attack_3","transitions":[{"id":26,"toState":1,"conditions":[{"id":29,"type":0,"controlVar":"animEnd","value":"1"}],"actions":[{"id":22,"controlVar":"attack","value":0}]}]},{"id":11,"name":"skill_2","animation":"skill_2","transitions":[{"id":27,"toState":1,"conditions":[{"id":30,"type":0,"controlVar":"animEnd","value":"1"}],"actions":[{"id":23,"controlVar":"skill","value":0}]}]},{"id":12,"name":"skill_3","animation":"skill_3","transitions":[{"id":28,"toState":1,"conditions":[{"id":31,"type":0,"controlVar":"onGround","value":"1"}],"actions":[{"id":24,"controlVar":"skill","value":0},{"id":25,"controlVar":"isRunning","value":0}]}]},{"id":13,"name":"skill_4","animation":"skill_4","transitions":[{"id":29,"toState":1,"conditions":[{"id":32,"type":0,"controlVar":"animEnd","value":"1"}],"actions":[{"id":26,"controlVar":"skill","value":0},{"id":27,"controlVar":"isRunning","value":0}]}]},{"id":14,"name":"skill_5","animation":"skill_5","transitions":[{"id":30,"toState":1,"conditions":[{"id":33,"type":0,"controlVar":"animEnd","value":"1"}],"actions":[{"id":28,"controlVar":"skill","value":0}]}]}]'));
+var im = new InputManager();
+
+function init () {
+    // Create a stage
+    stage = new createjs.Stage('myCanvas');
+    screenWidth = stage.canvas.width;
+    screenHeight = stage.canvas.height;
+
+    // Create sprite sheet from image
+    spriteSheet = new createjs.SpriteSheet(ssOptions);
+    
+    var bp = new BasePreload();
+    bp.load(spriteSheet);
+    bp.onFinish(setupStage);
+    
+    //Setup input
+    im.bind('go_left',  InputManager.KEY_LEFT,  false,  activateGoLeft,     deactivateGo);
+    im.bind('go_right', InputManager.KEY_RIGHT, false,  activateGoRight,    deactivateGo);
+    im.bind('jump',     InputManager.KEY_UP,    true,   activateJump);
+    im.bind('attack',   InputManager.KEY_SPACE, true,   activateAttack);
+    im.bind('skill1',   InputManager.KEY_1,     true,   activateSkill1);
+    im.bind('skill2',   InputManager.KEY_2,     true,   activateSkill2);
+    im.bind('skill3',   InputManager.KEY_3,     true,   activateSkill3);
+    im.bind('skill4',   InputManager.KEY_4,     true,   activateSkill4);
+    im.bind('skill5',   InputManager.KEY_5,     true,   activateSkill5);
+}
+
+function setupStage () {
+    // Create animation from sprite sheet and play 'idle'
+    actor = new createjs.Sprite(spriteSheet, 'idle');
+    
+    // Set initial position & scale
+    actor.setTransform(5, screenHeight);
+    
+    // Install state machine into actor
+    stateMachine.install(actor, onChangeState);
+    actor.setControlSilent('animEnd', false);
+    actor.setControlSilent('isRunning', false);
+    actor.setControlSilent('isJumping', false);
+    actor.setControlSilent('skill', 0);
+    actor.setControlSilent('onGround', false);
+    actor.setControlSilent('attack', 0);
+    actor.setControlSilent('direction', 1);
+    actor.execFuncs['jump'] = jump;
+    actor.execFuncs['cancelJump'] = cancelJump;
+    stateMachine.setStateByName('idle');
+    
+    // Set event handler
+    actor.addEventListener('animationend', onEndAnim);
+    
+    // Set trigger handler
+    actor.extraData = ssOptions.extraData;
+    actor.triggerFuncs['beginShaking'] = beginShakingCamera;
+    actor.triggerFuncs['endShaking'] = endShakingCamera;
+    actor.catchTriggers();
+    
+    // Add animation to stage
+    stage.addChild(actor);
+    
+    // Begin animating
+    createjs.Ticker.setFPS(60);
+    createjs.Ticker.addEventListener("tick", onTick);
+}
+
+var jumpTimeline = new TimelineLite();
+function jump (animationName) {
+    var jumpDuration = actor.getElapsedTime(animationName, 60);
+    if (jumpTimeline.totalDuration() == 0) {
+        jumpTimeline.add( new TweenLite(
+            actor,
+            jumpDuration / 2000,
+            {
+                y       : screenHeight - maxJumpHeight,
+                ease    : Sine.easeOut
+            }
+        ));
+        jumpTimeline.add( new TweenLite(
+            actor,
+            jumpDuration / 2000,
+            {
+                y       : screenHeight,
+                ease    : Sine.easeIn
+            }
+        ));
+    }
+    jumpTimeline.totalDuration(jumpDuration / 1000);
+    jumpTimeline.restart();
+}
+
+function cancelJump () {
+    jumpTimeline.pause();
+}
+
+function beginShakingCamera () {
+    TweenMax.to(stage.canvas, 0.02, _getRandomPos());
+}
+
+function endShakingCamera () {
+    TweenMax.killTweensOf(stage.canvas);
+    TweenMax.to(
+        stage.canvas, 
+        0.02, 
+        { marginLeft : '0px', marginTop : '0px' }
+    );
+}
+
+function _getRandomPos () {
+    return {
+        marginLeft  : ((Math.random() * 30) - 15) + 'px',
+        marginTop   : ((Math.random() * 20) - 10) + 'px',
+        repeat      : -1
+    };
+}
+
+function onTick (event) {
+    /*
+    var s = stateMachine.getCurrentStateName();
+    if (s == 'skill_3') {
+        actor.y += (event.delta * run_speed * 0.5);
+        if (actor.y >= screenHeight - 20) {
+            actor.y = screenHeight;
+            actor.setControl('onGround', true);
+        }
+    }
+    */
+    
+    //Input & update elements
+    im.onTick();
+    
+    //Update elements
+    var s = stateMachine.getCurrentStateName();
+    var d = actor.getControl('direction');
+    switch (s) {
+        case 'run' : 
+        case 'jump_when_running' : {
+            if (d == 1) {
+                if (actor.scaleX < 0) {
+                    actor.scaleX = -actor.scaleX;
+                    actor.x -= 32;
+                }
+            } else {
+                if (actor.scaleX > 0) {
+                    actor.scaleX = -actor.scaleX;
+                    actor.x += 32;
+                }
+            }
+            break;
+        }
+        case 'skill_3' : {
+            actor.y += (event.delta * run_speed * 0.2);
+            if (actor.y >= screenHeight - 20) {
+                actor.y = screenHeight;
+                actor.setControl('onGround', true);
+            }
+            break;
+        }
+    }
+    if (actor.getControl('isRunning')) {
+        actor.x += (event.delta * run_speed * d);
+        actor.x = MyDOM.clamp(actor.x, 32, screenWidth - 32);
+    }
+    
+    //Render
+    stage.onTick();
+    
+    //Debug
+    txtFPS.textContent = Math.floor(createjs.Ticker.getMeasuredFPS());
+}
+
+function activateGoLeft () {
+    if (!im.isActive('go_right')) {
+        actor.setControl('isRunning', true);
+        actor.setControl('direction', -1, true);
+    }
+}
+
+function activateGoRight () {
+    if (!im.isActive('go_left')) {
+        actor.setControl('isRunning', true);
+        actor.setControl('direction', 1, true);
+    }
+}
+
+function deactivateGo () {
+    if (!im.isActive('go_left') && !im.isActive('go_right')) {
+        actor.setControl('isRunning', false, true);
+    }
+}
+
+function activateJump () {
+    actor.setControl('isJumping', true);
+}
+
+function activateAttack () {
+    actor.adjustControl('attack', 1, true);
+}
+
+function activateSkill1 () {
+    actor.setControl('skill', 1);
+}
+
+function activateSkill2 () {
+    actor.setControl('skill', 2);
+}
+
+function activateSkill3 () {
+    actor.setControl('skill', 3);
+}
+
+function activateSkill4 () {
+    actor.setControl('skill', 4);
+}
+
+function activateSkill5 () {
+    actor.setControl('skill', 5);
+}
+
+function onChangeState (state, transition) {
+    //console.log('change to state ' + state.name + ' (animation = "' + state.animation + '")');
+    actor.setControlSilent('animEnd', false);
+    actor.animate(state.animation);
+}
+
+function onEndAnim () {
+    actor.setControl('animEnd', true);
+}
+
+document.body.onload = init;
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" >
+<title>Sprite Animation</title>
+</head>
+<body>
+
+<canvas id="myCanvas" width="800" height="64" style="box-shadow: 0 3px 5px #666;">
+    Your browser doesn't support HTML5
+</canvas>
+
+Position (X) : <span id="txt_speed"></span>
+<br/>
+<button type="button" onclick="toogleAnim();">Walk / Stand</button>
+
+<script src="JS/easeljs.js"></script>
+<script src="JS/BasePreload.class.js"></script>
+<script>
+var stage, spriteSheet, actor;
+var walk_speed = 0.15, walk_animation_speed = 2, walk_direction = 1;
+var screenWidth;
+
+var txt_speed = document.getElementById('txt_speed');
+
+function init () {
+    // Create a stage
+    stage = new createjs.Stage('myCanvas');
+    screenWidth = stage.canvas.width;
+
+    // Create sprite sheet from image
+    spriteSheet = new createjs.SpriteSheet({
+        images : [
+                  'Images/walk.png',
+                  'Images/idle.png'
+                 ],
+        frames : {
+            width   : 64,
+            height  : 64,
+            regX    : 32,
+            regY    : 64
+        },
+        animations : {
+            walk : {
+                frames : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                speed  : walk_speed * walk_animation_speed,
+                next   : 'walk' //loop
+            },
+            idle : {
+                frames : [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                speed  : walk_speed * walk_animation_speed,
+                next   : 'idle' //loop
+            }
+        }
+    });
+    
+    var bp = new BasePreload();
+    bp.load(spriteSheet);
+    bp.onFinish(setupStage);
+}
+
+function setupStage () {
+    // Create animation from sprite sheet and play 'idle'
+    actor = new createjs.Sprite(spriteSheet, 'idle');
+    
+    // Set initial position
+    actor.setTransform(32, 64);
+    actor.scaleX = -1;
+    
+    // Add animation to stage
+    stage.addChild(actor);
+    
+    // Begin animating
+    createjs.Ticker.setFPS(60);
+    createjs.Ticker.addEventListener("tick", onTick);
+}
+
+function onTick (event) {
+    if (actor.currentAnimation == 'walk') {
+        actor.x += (event.delta * walk_speed * walk_direction);
+        txt_speed.textContent = Math.round(actor.x);
+        
+        if (actor.x > screenWidth) {
+            walk_direction = -1;
+            actor.scaleX = 1;
+        } else if (actor.x < 0) {
+            walk_direction = 1;
+            actor.scaleX = -1;
+        }
+    }
+    
+    stage.update();
+}
+
+function toogleAnim () {
+    if (actor.currentAnimation == 'walk') {
+        actor.gotoAndPlay('idle');
+    } else {
+        actor.gotoAndPlay('walk');
+    }
+}
+
+document.body.onload = init;
+</script>
+</body>
+</html>

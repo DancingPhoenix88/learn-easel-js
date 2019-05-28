@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" >
+<title>Z Index</title>
+</head>
+<body>
+
+<canvas id="myCanvas" width="500" height="300" style="box-shadow: 0 0 5px #666;">
+    Your browser doesn't support HTML5
+</canvas>
+
+<script src="JS/easeljs.js"></script>
+<script src="JS/EaselJsUtil.js"></script>
+<script>
+var stage, cr, cg, cb;
+
+function init () {
+    // Create a stage
+    stage = new createjs.Stage('myCanvas');
+    
+    cr = new createjs.Shape();
+    cr.graphics.f('red').dc(0, 0, 50);
+    cr.setTransform(125, 100);
+    
+    cg = new createjs.Shape();
+    cg.graphics.f('green').dc(0, 0, 50);
+    cg.setTransform(175, 100);
+    
+    cb = new createjs.Shape();
+    cb.graphics.f('blue').dc(0, 0, 50);
+    cb.setTransform(150, 150);
+    
+    stage.addChild(cr);
+    stage.addChild(cg);
+    stage.addChild(cb);
+    
+    createjs.Ticker.setFPS(60);
+    createjs.Ticker.addEventListener("tick", onTick);
+}
+
+function onTick () {
+    stage.update();
+}
+
+document.body.onload = init;
+</script>
+</body>
+</html>
