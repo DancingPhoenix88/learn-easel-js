@@ -9,7 +9,17 @@
 <canvas id="myCanvas" width="800" height="400" style="box-shadow: 0 3px 5px #666;">
     Your browser doesn't support HTML5
 </canvas>
-<span id="txtFPS"></span>
+<p id="txtFPS"></p>
+<p style="font-style: italic;">
+    - ←/→: Left/Right<br/>
+    - ↑: Jump<br/>
+    - Space: Attack (3 combo)<br/>
+    - 1: Skill 1 (Thunder God). While on ground.<br/>
+    - 2: Skill 2 (Dragon Flame Blade). While on ground.<br/>
+    - 3: Skill 3 (Sky Waltz). While in air.<br/>
+    - 4: Skill 4 (Hurricane Fang). While running.<br/>
+    - 5: Skill 5 (Fallen Phoenix Crush). While idle.
+</p>
 
 <script src="JS/easeljs.js"></script>
 <script src="JS/BasePreload.class.js"></script>
@@ -194,7 +204,7 @@ function onTick (event) {
     stage.onTick();
     
     //Debug
-    txtFPS.textContent = Math.floor(createjs.Ticker.getMeasuredFPS());
+    txtFPS.textContent = Math.floor(createjs.Ticker.getMeasuredFPS()) + ' FPS';
 }
 
 function activateGoLeft () {

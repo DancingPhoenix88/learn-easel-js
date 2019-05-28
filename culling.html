@@ -9,7 +9,8 @@
 <canvas id="myCanvas" width="800" height="400" style="box-shadow: 0 3px 5px #666;">
     Your browser doesn't support HTML5
 </canvas>
-<span id="txtFPS"></span>
+<p id="txtFPS"></p>
+<p id="txtStats"></p>
 <script src="JS/easeljs.js"></script>
 <script src="JS/tween.js"></script>
 <script src="JS/BasePreload.class.js"></script>
@@ -19,9 +20,12 @@
 <script>
 var stage, spriteSheet;
 var screenWidth, screenHeight;
-var txtFPS = document.getElementById('txtFPS');
+var txtFPS   = document.getElementById('txtFPS');
+var txtStats = document.getElementById('txtStats');
 
-var ACTORS_COUNT = 5000;
+var ACTORS_COUNT = 1000;
+
+txtStats.textContent = ACTORS_COUNT + ' characters';
 
 var cm = new CullingManager();
 var c;
@@ -55,9 +59,15 @@ function setupStage () {
     
     // Add occluder
     var rect = new createjs.Shape();
-    rect.graphics.s('red').dr(screenWidth / 2, 0, screenWidth / 2, screenHeight);
+    rect.graphics.s('red').dr(
+        screenWidth * 0.75, screenHeight * 0.5, 
+        screenWidth * 0.25, screenHeight * 0.5
+    );
     stage.addChild(rect);
-    rect.setBounds(screenWidth / 2, 0, screenWidth / 2, screenHeight);//Shape doesn't have bound
+    rect.setBounds(
+        screenWidth * 0.75, screenHeight * 0.5, 
+        screenWidth * 0.25, screenHeight * 0.5
+    );//Shape doesn't have bound -> have to set manually
     
     // Init culling
     c = new Culling(stage);
@@ -73,7 +83,7 @@ function moveActor (a) {
     createjs.Tween.get(a).to(
         {
             x : MyDOM.clamp(a.x + Math.round(Math.random() * 1000) - 500, 0, screenWidth - 64),
-            y : MyDOM.clamp(a.y + Math.round(Math.random() * 1000) - 500, 64, screenHeight),
+            y : MyDOM.clamp(a.y + Math.round(Math.random() * 1000) - 500, 64, screenHeight - 10),
         }, 
         Math.round(Math.random() * 1000) + 2000
     ).call(moveActor, [a]);
@@ -81,7 +91,7 @@ function moveActor (a) {
 
 function onTick (event) {
     cm.execute();
-    txtFPS.textContent = Math.floor(createjs.Ticker.getMeasuredFPS());
+    txtFPS.textContent = Math.floor(createjs.Ticker.getMeasuredFPS()) + ' FPS';
     stage.update();
 }
 

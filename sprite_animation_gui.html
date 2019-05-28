@@ -151,7 +151,7 @@ canvas {
     <ol id="imagesListUl" onmousedown="onClickImages(event);"></ol>
 </div>
 <div id="importExport">
-    <div>Import: <input type="file" onchange="onImport(this.files[0]);this.disabled=true;"/></div>
+    <div>Import (.imss): <input type="file" onchange="onImport(this.files[0]);this.disabled=true;"/></div>
     <div>
         <button type="button" onclick="onExport();">Export</button>
         <button type="button" onclick="onSave();">Save</button>
@@ -168,7 +168,7 @@ canvas {
         <span id="frameStatMax"></span>
         <span id="duration"></span>
         <br/>
-        <button type="button" title="Play" onclick="playAnimation();">&gt;</button>
+        <button type="button" title="Play" onclick="playAnimation();">▶</button>
         <!-- <button type="button" title="Stop" onclick="stopAnimation();">||</button> -->
         <button type="button" title="Previous frame" onclick="prevAnimationFrame();">|&lt;</button>
         <button type="button" title="Next frame" onclick="nextAnimationFrame();">&gt;|</button>

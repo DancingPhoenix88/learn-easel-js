@@ -31,7 +31,10 @@ function init () {
     createjs.Ticker.setFPS(60);
     createjs.Ticker.addEventListener("tick", onTick);
     
-    createjs.Tween.get(circle).to({x : 200, y : 150}, 2000).to({x : 300, y : 0}, 1000);
+    createjs.Tween.get(circle)
+        .to({x : 200, y : 150}, 2000)
+        .to({x : 300, y : 0}, 1000)
+    ;
 }
 
 function drawCircle (radius, centerX, centerY, color) {

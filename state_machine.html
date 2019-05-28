@@ -211,13 +211,13 @@ function setControl (controlVar, value) {
         console.log ('set control var ' + controlVar + ' = ' + value);
     }
     actor.controls[controlVar] = value;
-    stateMachine.onUpdateActor(actor, onChangeState);
+    stateMachine.onUpdateContainer(actor, onChangeState);
 }
 
 function incControl (controlVar) {
     ++actor.controls[controlVar];
     console.log ('set control var ' + controlVar + ' = ' + actor.controls[controlVar]);
-    stateMachine.onUpdateActor(actor, onChangeState);
+    stateMachine.onUpdateContainer(actor, onChangeState);
 }
 
 function onChangeState (state, transition) {

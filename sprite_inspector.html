@@ -62,8 +62,8 @@
 </style>
 </head>
 <body>
-<input type="file" onchange="onSetImage(this.files[0]);"/>
-<input type="file" onchange="importData(this.files[0]);"/>
+Image (.png)<input type="file" onchange="onSetImage(this.files[0]);"/><br/>
+Data (.json)<input type="file" onchange="importData(this.files[0]);"/>
 
 <div id="controls">
     Origin X : <input type="number" id="txt_rx" onchange="updateOrigin();"/>&nbsp;&nbsp;&nbsp;&nbsp;

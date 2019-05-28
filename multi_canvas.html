@@ -14,7 +14,7 @@ canvas {
     left: 10px;
 }
 
-span {
+p {
     display: block;
     margin-top: 330px;
 }
@@ -28,8 +28,18 @@ span {
     Your browser doesn't support HTML5
 </canvas>
 
-<span id="txtFPS"></span>
+<p id="txtFPS"></p>
 <button type="button" onclick="toogleUpdateBg(this);">Current: Manually</button>
+<div style="font-style: italic;">
+    Front canvas contains 1000 animated characters, update 60 times/second.<br/>
+    Back canvas contains 5000 static images.<br/>
+    Click above button to toggle back canvas rendering between 2 modes:<br/>
+    <ul>
+        <li>Normal: Update every frame (60 FPS)</li>
+        <li>Manually: Update only when 'needUpdate' = true</li>
+        <li>Interval (not used in this demo): Update every X seconds</li>
+    </ul>
+</div>
 
 <script src="JS/BasePreload.class.js"></script>
 <script src="JS/tween.js"></script>
@@ -100,7 +110,7 @@ function moveActor (a) {
 }
 
 function onTick (event) {
-    txtFPS.textContent = Math.floor(createjs.Ticker.getMeasuredFPS());
+    txtFPS.textContent = Math.floor(createjs.Ticker.getMeasuredFPS()) + ' FPS';
     
     backStage.onTick();
     frontStage.onTick();
